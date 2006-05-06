@@ -28,10 +28,10 @@ _start:
 	mov sp, #0x210000
 
 	/* Preserve old link register */
-	stmdb sp!, {lr}
+	stmfd sp!, {lr}
 
 	/* Call main */
 	bl nxt_main
 
 	/* Return */
-	ldmia sp!, {pc}
+	ldmfd sp!, {pc}
