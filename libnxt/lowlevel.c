@@ -32,7 +32,7 @@
 
 enum nxt_usb_ids {
   VENDOR_LEGO   = 0x0694,
-  VENDOR_AMTEL  = 0x03EB,
+  VENDOR_ATMEL  = 0x03EB,
   PRODUCT_NXT   = 0x0002,
   PRODUCT_SAMBA = 0x6124
 };
@@ -68,7 +68,7 @@ nxt_error_t nxt_find(nxt_t *nxt)
 
       for (dev = bus->devices; dev != NULL; dev = dev->next)
         {
-          if (dev->descriptor.idVendor == VENDOR_AMTEL &&
+          if (dev->descriptor.idVendor == VENDOR_ATMEL &&
               dev->descriptor.idProduct == PRODUCT_SAMBA)
             {
               nxt->dev = dev;

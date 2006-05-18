@@ -61,7 +61,7 @@ nxt_flash_block(nxt_t *nxt, nxt_word_t block_num, char *buf)
   // Jump into the flash writing routine
   NXT_ERR(nxt_jump(nxt, 0x202000));
 
-  return NXT_OK; //nxt_wait_for_flash(nxt);
+  return NXT_OK;
 }
 
 

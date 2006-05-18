@@ -11,7 +11,7 @@ computer to talk a Lego Mindstorms NXT intelligent brick.  This
 includes:
 
  - Handling USB communication and locating the NXT in the USB tree,
- - Interaction with the Amtel AT91SAM boot assistant; especially:
+ - Interaction with the Atmel AT91SAM boot assistant; especially:
  - Flashing of a firmware image to the NXT
 
 Currently planned features:
