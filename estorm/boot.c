@@ -44,7 +44,7 @@ inline void estorm_init_clocks()
   /* Wait for master clock ready (just in case) */
   while (NXT_PMC->PMC_SR & PMC_SR_MCKRDY == 0);
 
-  /* Set the master clock prescaler to /2 */
+  /* Set the master clock prescaler to /2 (48MHz, the max cpu speed) */
   NXT_PMC->PMC_MCKR = PMC_MCKR_PRES_2 | PMC_MCKR_CSS_SLOW;
 
   /* Wait for master clock ready */
@@ -57,19 +57,23 @@ inline void estorm_init_clocks()
   while (NXT_PMC->PMC_SR & PMC_SR_MCKRDY == 0);
 }
 
-/* Initialize the reset controller
- *
- */
+/* Initialize the reset controller, allowing hardware resets. */
 inline void estorm_init_reset_control()
 {
   NXT_RSTC->RSTC_MR = (RSTC_MR_ERSTL_V(4) | RSTC_MR_URSTEN
                        | RSTC_MR_KEY_VAL);
 }
 
+inline void estorm_init_ticker()
+{
+  
+}
+
 void estorm_boot()
 {
-  estorm_init_flash();    /* Flash controller init */
-  estorm_init_watchdog(); /* Silence the watchdog  */
-  estorm_init_clocks();   /* Start clocks          */
+  estorm_init_flash(); /* Flash controller init */
+  estorm_init_watchdog(); /* Silence the watchdog */
+  estorm_init_clocks(); /* Start clocks */
   estorm_init_reset_control(); /* Allow hardware resets */
+  estorm_init_ticker(); /* Start ticking audibly */
 }

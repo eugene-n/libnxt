@@ -6,10 +6,83 @@
 typedef unsigned long int nxt_reg;
 
 /* Base address of the Power Management Controller */
+#define NXT_PWM_BASE  0xFFFCC000
 #define NXT_PMC_BASE  0xFFFFFC00
 #define NXT_RSTC_BASE 0xFFFFFD00
 #define NXT_WDT_BASE  0xFFFFFD40
 #define NXT_MC_BASE   0xFFFFFF00
+
+/********************************************************************
+ * PWM - Pulse Width Modulation generator                           *
+ ********************************************************************/
+volatile struct
+{
+  nxt_reg PWM_MR;     /* Mode Register */
+  nxt_reg PWM_ENA;    /* Enable Register */
+  nxt_reg PWM_DIS;    /* Disable Register */
+  nxt_reg PWM_SR;     /* Status Register */
+  nxt_reg PWM_IER;    /* Interrupt Enable Register */
+  nxt_reg PWM_IDR;    /* Interrupt Disable Register */
+  nxt_reg PWM_IMR;    /* Interrupt Mask Register */
+  nxt_reg PWM_ISR;    /* Interrupt Status Register */
+  nxt_reg _r[480];    /* Reserved */
+  struct {
+    nxt_reg PWM_CMR;  /* Channel Mode Register */
+    nxt_reg PWM_CDTY; /* Channel Duty Cycle Register */
+    nxt_reg PWM_CPRD; /* Channel Period Register */
+    nxt_reg PWM_CCNT; /* Channel Counter Register */
+    nxt_reg PWM_CUPD; /* Channel Update Register */
+    nxt_reg _r[12];   /* Reserved */
+  } PWM[3];
+} *NXT_PWM = NXT_PWM_BASE;
+
+/* Macro for referencing a PWM Channel ID, reusable in many
+   registers. */
+#define PWM_CHID(n) (1 << (n % 4))
+
+/* Enum of valid prescaler values, reused in a few places. */
+enum
+  {
+    PWM_PRES_MCK_1 = 0x0,
+    PWM_PRES_MCK_2 = 0x1,
+    PWM_PRES_MCK_4 = 0x2,
+    PWM_PRES_MCK_8 = 0x3,
+    PWM_PRES_MCK_16 = 0x4,
+    PWM_PRES_MCK_32 = 0x5,
+    PWM_PRES_MCK_64 = 0x6,
+    PWM_PRES_MCK_128 = 0x7,
+    PWM_PRES_MCK_256 = 0x8,
+    PWM_PRES_MCK_512 = 0x9,
+    PWM_PRES_MCK_1024 = 0xA,
+
+    PWM_PRES_CLKA = 0xB,
+    PWM_PRES_CLKB = 0xC,
+  }
+
+/* Flags, fields and values for PWM_MR */
+enum
+  {
+    PWM_MR_DIVA = 0xFF,             /* CLKA Divide Factor */
+    PWM_MR_PREA = (0xF << 8),       /* CLKA Prescale Factor */
+    PWM_MR_DIVB = (0xFF << 16),     /* CLKB Divide Factor */
+    PWM_MR_PREB = (0xF << 24),      /* CLKB Prescale Factor */
+  };
+
+#define PWM_MR_DIVA_V(div)  (((nxt_reg)pres) % 0x100)
+#define PWM_MR_PREA_V(pres) ((((nxt_reg)pres) % 0x10) << 8)
+#define PWM_MR_DIVB_V(div)  ((((nxt_reg)pres) % 0x100) << 16)
+#define PWM_MR_PREB_V(pres) ((((nxt_reg)pres) % 0x10) << 24)
+
+
+/* Flags, fields and values for PWM_CMR */
+enum
+  {
+    PWM_CMR_CPRE = 0xF,             /* Channel Pre-scaler */
+    PWM_CMR_CALG = (0x1 << 8),      /* Channel Alignment */
+    PWM_CMR_CPOL = (0x1 << 9),      /* Channel Polarity */
+    PWM_CMR_CPD = (0x1 << 10),      /* Channel Update Period */
+  };
+
 
 /********************************************************************
  * PMC - Power Management Controller                                *
@@ -50,7 +123,7 @@ volatile struct
   nxt_reg PMC_IMR;    /* Interrupt Mask Register */
 } *NXT_PMC = NXT_PMC_BASE;
 
-/* Flags fields and values for CKGR_MOR */
+/* Flags, fields and values for CKGR_MOR */
 enum
   {
     CKGR_MOR_ENABLE = 0x1,
@@ -204,7 +277,7 @@ volatile struct
   nxt_reg MC_ASR;  /* Abort Status Register */
   nxt_reg MC_AASR; /* Abort Address Status Register */
 
-  nxt_reg _r[22];  /* Reserved */
+  nxt_reg _r[21];  /* Reserved */
 
   nxt_reg MC_FMR;  /* Flash Mode Register */
   nxt_reg MC_FCR;  /* Flash Command Register */
