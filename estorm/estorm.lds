@@ -1,10 +1,9 @@
 SECTIONS
 {
-  . = 0x00200000;
+  . = 0x00000000;
   . = ALIGN(4);
-  ENTRY(reset);
-  .crt : { crt0.o(.text) }
-  .text : { *(EXCLUDE_FILE (*crt0.o) .text) }
-  .data : { *(.data) }
-  .bss : { *(.bss) }
+  start = 0x00000000;
+  .bootstrap : { *(.bootstrap) }
+  .text : { *(.text*) }
+  .data : { *(.data*) }
 }
