@@ -53,6 +53,8 @@ inline void estorm_init_clocks()
 
   /* Wait for master clock ready */
   while ((*AT91C_PMC_SR & AT91C_PMC_MCKRDY) == 0);
+
+  /* TODO enable USB clocks */
 }
 
 /* Initialize the reset controller, allowing hardware resets. */
@@ -66,14 +68,14 @@ inline void estorm_init_ticker()
   /* Enable the PWM controller clock */
   *AT91C_PMC_PCER = (1 << AT91C_ID_PWMC);
 
-  /* Set the PWM channel 0 to a 0-duty-cycle period of 0x7FFF, twice
-   * faster than SAM-BA */
-  *AT91C_PWMC_CH2_CMR = 0x8;
-  *AT91C_PWMC_CH2_CDTYR = 440;
-  *AT91C_PWMC_CH2_CPRDR = 880;
+  /* Set the PWM channel 0 to a 0.5 duty-cycle period at approx. 440Hz
+     faster than SAM-BA */
+  *AT91C_PWMC_CH0_CMR = 0x8;
+  *AT91C_PWMC_CH0_CDTYR = 440;
+  *AT91C_PWMC_CH0_CPRDR = 880;
 
   /* Activate PWM channel 0 */
-  *AT91C_PWMC_ENA = 0x8;
+  *AT91C_PWMC_ENA = 0x1;
 }
 
 void estorm_boot()
