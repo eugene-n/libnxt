@@ -19,8 +19,8 @@
  * USA
  */
 
-#define VINTPTR(addr) ((volatile unsigned long *)(addr))
-#define VINT(addr) ((volatile unsigned long)(*(VINTPTR(addr))))
+#define VINTPTR(addr) ((volatile unsigned int *)(addr))
+#define VINT(addr) (*(VINTPTR(addr)))
 
 #define USER_PAGE VINTPTR(0x00202100)
 #define USER_PAGE_NUM VINT(0x00202300)

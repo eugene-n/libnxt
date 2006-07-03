@@ -68,10 +68,12 @@ inline void estorm_init_ticker()
 
   /* Set the PWM channel 0 to a 0-duty-cycle period of 0x7FFF, twice
    * faster than SAM-BA */
-  *AT91C_PWMC_CH0_CPRDR = 0x7FFF;
+  *AT91C_PWMC_CH2_CMR = 0x8;
+  *AT91C_PWMC_CH2_CDTYR = 440;
+  *AT91C_PWMC_CH2_CPRDR = 880;
 
   /* Activate PWM channel 0 */
-  *AT91C_PWMC_ENA = 0x1;
+  *AT91C_PWMC_ENA = 0x8;
 }
 
 void estorm_boot()

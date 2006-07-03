@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -80,7 +81,7 @@ nxt_firmware_validate_fd(int fd)
   if (fstat(fd, &s) < 0)
     return NXT_FILE_ERROR;
 
-  if (s.st_size != 256*1024)
+  if (s.st_size > 256*1024)
     return NXT_INVALID_FIRMWARE;
 
   return NXT_OK;
@@ -125,13 +126,20 @@ nxt_firmware_flash(nxt_t *nxt, char *fw_path)
   for (i = 0; i < 1024; i++) //256*1024; i += 256)
     {
       char buf[256];
+      int ret;
 
-      if (read(fd, buf, 256) != 256)
+      memset(buf, 0, 256);
+      ret = read(fd, buf, 256);
+
+      if (ret != -1)
+        NXT_ERR(nxt_flash_block(nxt, i, buf));
+
+      if (ret < 256)
         {
           close(fd);
-          nxt_flash_finish(nxt);
+          NXT_ERR(nxt_flash_finish(nxt));
 
-          return NXT_FILE_ERROR;
+          return ret == -1 ? NXT_FILE_ERROR : NXT_OK;
         }
 
       NXT_ERR(nxt_flash_block(nxt, i, buf));
