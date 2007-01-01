@@ -1,91 +1,112 @@
-/* EStorm bootup code */
+/* NXT bootup code */
 
 #include "at91sam7s256.h"
 
-/* Configure the Flash controller with write speed settings. These
- * settings are valid for writing everywhere but the non-volatile bits
- * (lock, security, general-purpose NVM)
- */
-inline void estorm_init_flash()
-{
-  /* The values are those provided by the LEGO OS. */
-  *AT91C_MC_FMR = AT91C_MC_FWS_1FWS | (0x48 << 16);
-}
+extern void nxt_default_irq_handler(void);
+extern void nxt_default_fiq_handler(void);
+extern void nxt_spurious_irq_handler(void);
 
-/* Initialize the watchdog timer, by disabling it. We do not need it
- * in our application.
- */
-inline void estorm_init_watchdog()
+/* Boot the board's main oscillator and step the CPU up to 48MHz. */
+static inline void init_clocks()
 {
-  *AT91C_WDTC_WDMR = AT91C_WDTC_WDDIS;
-}
+  /* Enable the internal main oscillator.
+   *
+   * The oscillator must be given a quartz-dependent time to start
+   * up. For the NXT, this must be set to 6 cycles of the slow clock,
+   * which at this stage controls the board.
+   */
+  *AT91C_CKGR_MOR = AT91C_CKGR_MOSCEN | (6 << 8);
 
-/* Boot the quartz oscillator, step the CPU up to 48MHz, and enable
- * USB clocks.
- */
-inline void estorm_init_clocks()
-{
-  /* Enable internal main oscillator */
-  *AT91C_CKGR_MOR = AT91C_CKGR_MOSCEN | (0x6 << 8);
-
-  /* Wait for oscillator to stabilize */
+  /* Wait for the oscillator to stabilize. */
   while ((*AT91C_PMC_SR & AT91C_PMC_MOSCS) == 0);
 
-  /* Initialize the PLL clock. The quartz runs at 18.432MHz, we run
-   * the PLL at ~96MHz.
+  /* Initialize the PLL clock.
+   *
+   * This clock will later provide the basis for the main board
+   * clock. The quartz on the board runs at 18.432MHz, and we want a
+   * main clock running at 48MHz. The best we can do is to set the PLL
+   * to run at 96MHz, and then clock back down when configuring the
+   * main clock.
+   *
+   * To do so, we divide the input signal by 14, then multiply the
+   * output by 73 (72+1, as the datasheet says that the board adds 1
+   * to the value written in the register), which clocks us to
+   * 96.11MHz. Note that the USB clock requires an input signal of
+   * 96MHz +/- 0.25%. A frequency of 96.11MHz is a deviation of .11%,
+   * therefore acceptable.
+   *
+   * We also configure the USB clock divider in the same register
+   * write, as the divider is in the same register.
+   *
+   * The PLL clock is estimated to lock within 0.844ms (estimate
+   * documented in the LEGO source code), which maps to ~28 slow clock
+   * cycles.
    */
-  *AT91C_CKGR_PLLR = (0xE | (0x1C << 8) | (0x48 << 16) | AT91C_CKGR_USBDIV_1);
+  *AT91C_CKGR_PLLR = (14 | (28 << 8) | (72 << 16) | AT91C_CKGR_USBDIV_1);
 
-  /* Wait for the PLL to lock */
+  /* Wait for the PLL to lock. */
   while ((*AT91C_PMC_SR & AT91C_PMC_LOCK) == 0);
 
-  /* Wait for master clock ready (just in case) */
+  /* Wait for master clock ready before fiddling with it, just as a
+     precaution. It should be running fine at this stage. */
   while ((*AT91C_PMC_SR & AT91C_PMC_MCKRDY) == 0);
 
-  /* Set the master clock prescaler to /2 (48MHz, the max cpu speed) */
+  /* Set the master clock prescaler to divide by two, which sets the
+   * master clock to 16KHz (half the slow clock frequency).
+   *
+   * Note that we stay on the slow clock, because of the procedure
+   * explained in the specification: you must first set the prescaler,
+   * wait for the newly scaled clock to stabilize, then switch to a
+   * new clock source in a separate operation.
+   */
   *AT91C_PMC_MCKR = AT91C_PMC_CSS_SLOW_CLK | AT91C_PMC_PRES_CLK_2;
 
-  /* Wait for master clock ready */
+  /* Wait for the master clock to stabilize. */
   while ((*AT91C_PMC_SR & AT91C_PMC_MCKRDY) == 0);
 
-  /* Switch the main clock over to the PLL */
+  /* Switch the master clock source over to the PLL clock. */
   *AT91C_PMC_MCKR = AT91C_PMC_CSS_PLL_CLK | AT91C_PMC_PRES_CLK_2;
 
-  /* Wait for master clock ready */
+  /* Wait for the master clock to stabilize at 48MHz. */
   while ((*AT91C_PMC_SR & AT91C_PMC_MCKRDY) == 0);
 
   /* TODO enable USB clocks */
 }
 
-/* Initialize the reset controller, allowing hardware resets. */
-inline void estorm_init_reset_control()
+
+void nxt_low_level_init()
 {
-  *AT91C_RSTC_RMR = 0x1 | (0x4 << 8);
-}
+  int i;
 
-inline void estorm_init_ticker()
-{
-  /* Enable the PWM controller clock */
-  *AT91C_PMC_PCER = (1 << AT91C_ID_PWMC);
+  /* Configure the Flash controller with write speed settings. These
+   * settings are valid for writing everywhere but the non-volatile bits
+   * (lock, security, general-purpose NVM).
+   *
+   * These values will yield valid timing only after the master clock
+   * is configured to run at 48MHz, ie. after the call to
+   * init_clocks. Do NOT write to flash before then!
+   */
+  *AT91C_MC_FMR = AT91C_MC_FWS_1FWS | (0x48 << 16);
 
-  /* Set the PWM channel 0 to a 0.5 duty-cycle period at approx. 440Hz
-     faster than SAM-BA */
-  *AT91C_PWMC_CH0_CMR = 0x8;
-  *AT91C_PWMC_CH0_CDTYR = 440;
-  *AT91C_PWMC_CH0_CPRDR = 880;
+  /* Disable the watchdog timer for now. The kernel can reenable it
+   * later if it feels like it.
+   */
+  *AT91C_WDTC_WDMR = AT91C_WDTC_WDDIS;
 
-  /* Activate PWM channel 0 */
-  *AT91C_PWMC_ENA = 0x1;
-}
+  /* Start the board clocks and step up to 48MHz. */
+  init_clocks();
 
-void estorm_boot()
-{
-  estorm_init_flash(); /* Flash controller init */
-  estorm_init_watchdog(); /* Silence the watchdog */
-  estorm_init_clocks(); /* Start clocks */
-  estorm_init_reset_control(); /* Allow hardware resets */
-  estorm_init_ticker(); /* Start ticking audibly */
+  /* Set up the Advanced Interrupt Controller with the default
+   * handlers. The handlers at startup are undefined, which will cause
+   * undefined behavior if the kernel activates an interrupt line
+   * before configuring the handler.
+   */
+  AT91C_BASE_AIC->AIC_SVR[0] = (long int) nxt_default_fiq_handler;
+  for (i=1; i<31; i++) {
+    AT91C_BASE_AIC->AIC_SVR[i] = (long int) nxt_default_irq_handler;
+  }
+  AT91C_BASE_AIC->AIC_SPU = (long int) nxt_spurious_irq_handler;
 
-  while(1); /* Crash here for now. If we live through that init
-               sequence, it's already a miracle. */
+  /* Initialize the reset controller, allowing hardware resets. */
+  /* *AT91C_RSTC_RMR = 0x1 | (0x4 << 8); */
 }
