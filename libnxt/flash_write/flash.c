@@ -31,7 +31,7 @@
 #define OFFSET_PAGE_NUM ((USER_PAGE_NUM & 0x000003FF) << 8)
 #define FLASH_CMD_WRITE (0x5A000001 + OFFSET_PAGE_NUM)
 
-int nxt_main(void)
+void do_flash_write(void)
 {
   unsigned long i;
 
@@ -43,6 +43,4 @@ int nxt_main(void)
   FLASH_CMD_REG = FLASH_CMD_WRITE;
 
   while (!(FLASH_STATUS_REG & 0x1));
-
-  return 0;
 }

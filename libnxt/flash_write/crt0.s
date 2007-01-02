@@ -31,7 +31,7 @@ _start:
 	stmfd sp!, {lr}
 
 	/* Call main */
-	bl nxt_main
+	bl do_flash_write
 
 	/* Return */
 	ldmfd sp!, {pc}
