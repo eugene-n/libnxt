@@ -110,3 +110,28 @@ void nxt_low_level_init()
   /* Initialize the reset controller, allowing hardware resets. */
   /* *AT91C_RSTC_RMR = 0x1 | (0x4 << 8); */
 }
+
+
+/*
+ * Helper functions to do data copy and memory initialization. This is
+ * only used during the initialization, and the code is no longer
+ * available once the payload boots.
+ *
+ * Both the following methods return the address (dst + n_bytes),
+ * suitable for passing back into the helpers as the new destination
+ * (for chained copies/inits).
+ */
+
+char *init_memcpy(char *dst, char *src, long int n_bytes) {
+  while (n_bytes--)
+    *dst++ = *src++;
+
+  return dst;
+}
+
+char *init_memset(char *dst, char val, long int n_bytes) {
+  while (n_bytes--)
+    *dst++ = val;
+
+  return dst;
+}

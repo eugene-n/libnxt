@@ -8,6 +8,9 @@
 #define AIC_FVR 0x104   /* Offset of the FVR register within the AIC. */
 #define AIC_EOICR 0x130 /* Offset of the EOICR register within the AIC. */
 
+#define MC_BASE 0xFFFFFF00 /* Base of the MC register bank. */
+#define MC_REMAP 0x0       /* Offset of the RCR register within the MC. */
+
 #define FIQ_MASK 0x6    /* FIQ disable control bit in the CPSR. */
 #define IRQ_MASK 0x7    /* IRQ disable control bit in the CPSR. */
 
@@ -15,6 +18,7 @@
 #define MODE_IRQ 0x12   /* IRQ mode. */
 #define MODE_SVC 0x13   /* Supervisor mode. */
 
+#define RAM_START 0x00200000 /* The first address of RAM. */
 #define RAM_END 0x002FFFFF  /* The last address of RAM. */
 #define IRQ_STACK_SIZE 0x60 /* The size of the IRQ mode stack: 3*4*8 bytes. */
 
@@ -129,6 +133,15 @@ nxt_spurious_irq_handler:
 .global nxt_default_irq_handler
 .global nxt_spurious_irq_handler
 
+end:	b end
+
+/*
+ * This is a marker, used in the payload initialization code to figure
+ * out where to copy the payload in ram.
+ */
+payload_start:
+.global payload_start
+
 
 /*
  * Main initialization. This is where the execution starts when the
@@ -173,16 +186,56 @@ init_reset:
 	msr CPSR_c, #MODE_SVC
 	mov sp, r0
 
-	/* TODO: relocate to ram and remap */
+	/* Copy the interrupt vectors and interrupt dispatchers into
+	 * ram. We don't copy the init_reset method, as we're going to
+	 * put the actual application payload there.
+	 */
+	ldr r0, =RAM_START
+	mov r1, #0
+	ldr r2, =payload_start
+	bl init_memcpy
 
-	/* TODO: initialize BSS */
+	/* Overwrite the reset vector to point to itself. We don't yet
+	 * support warm reboots, so we should just crash if it's
+	 * attempted.
+	 */
+	ldr r1, =RAM_START
+	str r1, [r1]
 
-	/* Boot into the kernel's main(). */
+	/* Copy the application payload to ram. For this, we use the
+	 * handy symbols that ld provides us, that give us the address in
+	 * flash where the payload is, and the total size of the payload.
+	 *
+	 * We load the payload at the address payload_start, which is
+	 * where ld relocated the addresses to be.
+	 *
+	 * Note that this overwrites the code we're currently in, so
+	 * as soon as we remap the bottom section from flash to ram, the
+	 * crt0 initialization code will be lost. No biggie, we can still
+	 * get to it by hitting flash directly.
+	 */
+	ldr r1, =__b_load
+	ldr r2, =__load_size
+	bl init_memcpy
+
+	/* Initialize the BSS. Again, we use handy symbols that ld
+	 * defines for us, that specify the size of the BSS section.
+	 */
+	mov r1, #0
+	ldr r2, =__bss_size
+	bl init_memset
+
+	/* We're almost ready to boot the kernel. We first set up all
+	 * the registers, getting ready for the remap. Once the remap
+	 * command has executed, we have to banch to load_main before the
+	 * pipeline empties, otherwise we'll fall down into the
+	 * application payload and crash.
+	 */
 	ldr lr, =end
-	ldr r0, =main
-	bx r0
+	ldr ip, =main
+	ldr r4, =MC_BASE
+	mov r5, #1
 
-main:
-
-/* Crash if the application ever returns */
-end:	b end
+	/* Execute the remap, and branch into the kernel. */
+	str r5, [r4, #MC_REMAP]
+	bx ip
