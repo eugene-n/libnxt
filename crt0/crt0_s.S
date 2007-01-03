@@ -120,6 +120,53 @@ irq_dispatch:
 
 
 /*
+ * Low level service routines that inhibit and enable interrupts in
+ * the CPU. These are provided as helpers to the OS, as C code cannot
+ * directly touch the core mode register.
+ */
+
+/* Disable IRQ and FIQ handling in the CPU. */
+interrupts_disable:
+	/* Get the interrupt counter and increment it. */
+	adr r1, interrupts_count
+	ldr r2, [r1]
+	adds r2, r2, #1
+	str r2, [r1]
+
+	/* If the add didn't cause an overflow, interrupts are already
+	 * disabled. Return immediately.
+	 */
+	bxvc lr
+
+	/* Otherwise, disable interrupts. */
+	mrs r0, CPSR
+	orr r0, r0, #(IRQ_MASK | FIQ_MASK)
+	msr CPSR_c, r0
+	bx lr
+
+/* Enable IRQ and FIQ handling in the CPU. */
+interrupts_enable:
+	adr r1, interrupts_count
+	ldr r2, [r1]
+	subs r2, r2, #1
+	str r2, [r1]
+
+	/* If we are still inside a nested interrupt disable, don't
+	 * reenable interrupts. Return immediately.
+	 */
+	bxpl lr
+
+	/* Otherwise, reenable interrupts. */
+	mrs r0, CPSR
+	bic r0, r0, #(IRQ_MASK | FIQ_MASK)
+	msr CPSR_c, r0
+	bx lr
+
+interrupts_count:
+	/* The byte count starts at 0, which is interrupts disabled with 1 level of nesting. Interrupts enabled is 0xFF. */
+	.int 0
+
+/*
  * Default handlers for the interrupt controller. The board is
  * initialized with interrupts disabled, and these handlers set.
  */
@@ -174,16 +221,8 @@ init_reset:
 
 	/* Go back to Supervisor mode and set up the Supervisor stack
 	 * to start at the top of the IRQ stack.
-	 *
-	 *
-	 * Note that we also enable interrupts at this point, one
-	 * instruction before the SVC stack is set up. In theory, this is
-	 * a problem, because we might have an interrupt before we're
-	 * ready to handle it. In practice though, the low level init
-	 * function explicitely shut down all interrupts in the AIC, so
-	 * we're safe.
 	 */
-	msr CPSR_c, #MODE_SVC
+	msr CPSR_c, #(IRQ_MASK | FIQ_MASK | MODE_SVC)
 	mov sp, r0
 
 	/* Copy the interrupt vectors and interrupt dispatchers into

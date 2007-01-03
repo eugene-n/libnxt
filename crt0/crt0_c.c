@@ -74,10 +74,52 @@ static inline void init_clocks()
 }
 
 
-void nxt_low_level_init()
-{
+/*
+ * Initialize the Advanced Interrupt Controller with stub handlers and
+ * all interrupts disabled.
+ */
+static inline void init_aic() {
   int i;
 
+  /* Do some garbage collection on the AIC. All these are to protect
+   * against the case where we are coming from a warm boot. These
+   * values define the modes in which the AIC should be booting up.
+   *
+   *  - Disable all peripheral interrupt lines.
+   *  - Turn off Fast Forcing for all peripheral interrupt lines.
+   *  - Clear all pending interrupts.
+   *  - Tell the AIC that it is no longer handling any interrupt.
+   */
+  AT91C_BASE_AIC->AIC_IDCR = 0xFFFFFFFF;
+  AT91C_BASE_AIC->AIC_FFDR = 0xFFFFFFFF;
+  AT91C_BASE_AIC->AIC_ICCR = 0xFFFFFFFF;
+  AT91C_BASE_AIC->AIC_EOICR = 0xFFFFFFFF;
+
+  /* Since it can be useful for JTAG debugging, enable debug mode in
+   * the AIC. In this mode, reading the interrupt vector register will
+   * not unlock the AIC and let it trigger any higher priority
+   * IRQs. We will have to write back to the vector register to unlock
+   * the AIC (the low-level IRQ dispatcher routine does this already).
+   */
+  AT91C_BASE_AIC->AIC_DCR = 0x1;
+
+  /* Set up the AIC with the default handlers. The handlers at startup
+   * are undefined, which will cause undefined behavior if the kernel
+   * activates an interrupt line before configuring the handler.
+   */
+  AT91C_BASE_AIC->AIC_SVR[0] = (long int) nxt_default_fiq_handler;
+  for (i=1; i<31; i++) {
+    AT91C_BASE_AIC->AIC_SVR[i] = (long int) nxt_default_irq_handler;
+  }
+  AT91C_BASE_AIC->AIC_SPU = (long int) nxt_spurious_irq_handler;
+
+}
+
+
+/* Routine called by the low level bootstrapper assembly code to
+ * perform basic board initialization.
+ */
+void nxt_low_level_init() {
   /* Configure the Flash controller with write speed settings. These
    * settings are valid for writing everywhere but the non-volatile bits
    * (lock, security, general-purpose NVM).
@@ -96,19 +138,8 @@ void nxt_low_level_init()
   /* Start the board clocks and step up to 48MHz. */
   init_clocks();
 
-  /* Set up the Advanced Interrupt Controller with the default
-   * handlers. The handlers at startup are undefined, which will cause
-   * undefined behavior if the kernel activates an interrupt line
-   * before configuring the handler.
-   */
-  AT91C_BASE_AIC->AIC_SVR[0] = (long int) nxt_default_fiq_handler;
-  for (i=1; i<31; i++) {
-    AT91C_BASE_AIC->AIC_SVR[i] = (long int) nxt_default_irq_handler;
-  }
-  AT91C_BASE_AIC->AIC_SPU = (long int) nxt_spurious_irq_handler;
-
-  /* Initialize the reset controller, allowing hardware resets. */
-  /* *AT91C_RSTC_RMR = 0x1 | (0x4 << 8); */
+  /* Initialize the Advanced Interrupt Controller. */
+  init_aic();
 }
 
 
