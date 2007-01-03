@@ -13,16 +13,19 @@ LD=$(TOOL_PREFIX)ld
 OBJCOPY=$(TOOL_PREFIX)objcopy
 OBJDUMP=$(TOOL_PREFIX)objdump
 
+CCFLAGS=-W -Wall -O2 -mcpu=arm7tdmi -mapcs -mthumb-interwork -I../support
+ASFLAGS=-W -Wall -O2 -Wa,-mcpu=arm7tdmi,-mapcs-32,-mthumb-interwork
+
 all: crt0.o
 
 crt0.o: crt0_s.o crt0_c.o crt0.lds
 	$(LD) -N -O2 -T crt0.lds -r crt0_s.o crt0_c.o -o crt0.o
 
 crt0_s.o: crt0_s.S
-	$(GCC) -W -Wall -O2 -Wa,-mcpu=arm7tdmi,-mapcs-32,-mthumb-interwork -c -o $@ $<
+	$(GCC) $(ASFLAGS) -c -o $@ $<
 
 crt0_c.o: crt0_c.c
-	$(GCC) -W -Wall -O2 -mcpu=arm7tdmi -mapcs -mthumb-interwork -c -o $@ $<
+	$(GCC) $(CCFLAGS) -c -o $@ $<
 
 %.bin: %.elf
 	$(OBJCOPY) -O binary -R .bss $< $@
@@ -33,7 +36,7 @@ crt0_c.o: crt0_c.c
 	$(OBJDUMP) --disassemble-all -m arm7tdmi $@ > $@.asm
 
 %.o: %.c
-	$(GCC) -W -Wall -O2 -mcpu=arm7tdmi -mapcs -mthumb-interwork -c -o $@ $<
+	$(GCC) $(CCFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.asm *.bin *.elf *~
