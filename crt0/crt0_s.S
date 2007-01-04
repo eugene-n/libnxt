@@ -271,7 +271,7 @@ init_reset:
 	 * application payload and crash.
 	 */
 	ldr lr, =end
-	ldr ip, =main
+	ldr ip, =kernel_main
 	ldr r4, =MC_BASE
 	mov r5, #1
 
