@@ -27,4 +27,9 @@ void aic_disable(aic_vector_t vector);
  */
 void aic_install_isr(aic_vector_t vector, void *isr);
 
+/* Manually force the AIC to trigger an irq exception for the given
+ * interrupt VECTOR.
+ */
+inline void aic_trigger_irq(aic_vector_t vector);
+
 #endif
