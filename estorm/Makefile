@@ -1,40 +1,53 @@
 include environment.mak
 
-TARGET = nxtos
+TARGET = estorm
+BUILD = build
 
 S_SOURCES = crt0_s.S vectors.S
 C_SOURCES = crt0_c.c main.c aic.c sys_timer.c
 
-S_OBJECTS = $(S_SOURCES:.S=.o)
-C_OBJECTS = $(C_SOURCES:.c=.o)
+ROM_TARGET = $(TARGET)_rom.bin
+SAMBA_TARGET  = $(TARGET)_samba.bin
 
-GCC=$(TOOL_PREFIX)gcc$(TOOL_SUFFIX)
-AS=$(TOOL_PREFIX)as
-LD=$(TOOL_PREFIX)ld
-OBJCOPY=$(TOOL_PREFIX)objcopy
-OBJDUMP=$(TOOL_PREFIX)objdump
+SOURCE_LDSCRIPT = $(TARGET).lds
+ROM_LDSCRIPT = $(BUILD)/$(TARGET)_rom.lds
+SAMBA_LDSCRIPT = $(BUILD)/$(TARGET)_samba.lds
+
+S_OBJECTS = $(addprefix $(BUILD)/,$(S_SOURCES:.S=.o))
+C_OBJECTS = $(addprefix $(BUILD)/,$(C_SOURCES:.c=.o))
 
 OPTIMIZE=-O2
 
-CCFLAGS=-ffreestanding -W -Wall -Werror $(OPTIMIZE) -mcpu=arm7tdmi -mapcs -mthumb-interwork -Isupport -Icrt0
-ASFLAGS=-W -Wall -Werrror $(OPTIMIZE) -Wa,-mcpu=arm7tdmi,-mapcs-32,-mthumb-interwork,-mfpu=softfpa
-LDFLAGS=-N -nostdlib $(OPTIMIZE) -T crt0/nxt.lds -Lcrt0
+CCFLAGS=-ffreestanding -W -Wall -Werror $(OPTIMIZE) -mcpu=arm7tdmi -msoft-float -mfpu=fpa -mapcs -mthumb-interwork -Isupport
+ASFLAGS=-W -Wall -Werror $(OPTIMIZE) -Wa,-mcpu=arm7tdmi,-mapcs-32,-mthumb-interwork,-mfpu=softfpa
+LDFLAGS=-N -Map $@.map -nostdlib $(OPTIMIZE) -cref --gc-sections -L$(BUILD)
 
-all: estorm.bin
+all: $(ROM_TARGET) $(SAMBA_TARGET)
 
-estorm.bin: estorm.elf
-	$(OBJCOPY) -O binary -R .bss $< $@
-	$(OBJDUMP) --disassemble-all -b binary -m arm7tdmi $@ > $@.asm
+$(SAMBA_LDSCRIPT): $(SOURCE_LDSCRIPT)
+	cat $< | sed -E -e 's/^ *SAMBA_ONLY//' -e '/^ *ROM_ONLY/d' >$@
 
-estorm.elf: $(S_OBJECTS) $(C_OBJECTS) crt0/crt0.o crt0/nxt.lds
-	$(LD) -o $@ $(S_OBJECTS) $(C_OBJECTS) $(LDFLAGS)
-	$(OBJDUMP) --disassemble-all -m arm7tdmi $@ > $@.asm
+$(ROM_LDSCRIPT): $(SOURCE_LDSCRIPT)
+	cat $< | sed -E -e 's/^ *ROM_ONLY//' -e '/^ *SAMBA_ONLY/d' >$@
 
-%.o: %.c
+$(SAMBA_TARGET): $(BUILD)/$(SAMBA_TARGET)_elf
+	$(OBJCOPY) -O binary $< $@
+
+$(ROM_TARGET): $(BUILD)/$(ROM_TARGET)_elf
+	$(OBJCOPY) -O binary $< $@
+
+$(BUILD)/$(SAMBA_TARGET)_elf: $(C_OBJECTS) $(S_OBJECTS) $(SAMBA_LDSCRIPT)
+	$(LD) -o $@ $(C_OBJECTS) $(S_OBJECTS) -T $(SAMBA_LDSCRIPT) $(LDFLAGS)
+
+$(BUILD)/$(ROM_TARGET)_elf: $(C_OBJECTS) $(S_OBJECTS) $(ROM_LDSCRIPT)
+	$(LD) -o $@ $(C_OBJECTS) $(S_OBJECTS) -T $(ROM_LDSCRIPT) $(LDFLAGS)
+
+$(BUILD)/%.o: %.c
 	$(GCC) $(CCFLAGS) -c -o $@ $<
 
-%.o: %.S
+$(BUILD)/%.o: %.S
 	$(GCC) $(ASFLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o *.asm *.bin *.elf *~
+	rm -rf $(BUILD) $(SAMBA_TARGET) $(ROM_TARGET)
+	mkdir $(BUILD)

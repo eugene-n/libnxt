@@ -1,4 +1,5 @@
-.section ".bootstrap"
+.code 32
+.text
 
 /*
  * Definition of a few constants used in the interrupt dispatchers.
@@ -22,23 +23,27 @@
 #define RAM_END 0x002FFFFF  /* The last address of RAM. */
 #define IRQ_STACK_SIZE 0x60 /* The size of the IRQ mode stack: 3*4*8 bytes. */
 
-/*
- * The following is the interrupt vector block of the system.
- */
-reset:		b init_reset	/* Reset */
+
+.global init_reset
+.global illegal_hdl
+.global swi_hdl
+.global prefetch_hdl
+.global data_hdl
+.global reserved_hdl
+.global irq_hdl
+.global fiq_hdl
+
 illegal_hdl:	b illegal_hdl 	/* Illegal instruction */
 swi_hdl:	b swi_hdl	/* Software interrupt */
 prefetch_hdl:	b prefetch_hdl	/* Prefetch abort */
 data_hdl:	b data_hdl	/* Data abort */
 reserved_hdl:	b reserved_hdl	/* Reserved vector */
-irq_hdl:	b irq_dispatch  /* IRQ */
-fiq_hdl:			/* FIQ */
-
 
 /*
  * This is the FIQ handler. It simply wraps the registered FIQ
  * handling routine in the required exception handling code.
  */
+fiq_hdl:
 
 	/* Save R0 to an FIQ banked register, replace it with the AIC
  	 * register base address, and switch into supervisor (SVC) mode.
@@ -69,7 +74,7 @@ fiq_hdl:			/* FIQ */
  * interrupt coming from the AIC. It switches to supervisor mode and
  * dispatches executions to the registered handler.
  */
-irq_dispatch:
+irq_hdl:
 
 	/* Save the return address and return processor mode registers
 	 * on the IRQ stack. This is needed to allow nested interrupts,
@@ -176,12 +181,73 @@ nxt_default_irq_handler:
 
 end:	b end
 
+
 /*
- * This is a marker, used in the payload initialization code to figure
- * out where to copy the payload in ram.
+ * Macros and functions to do memory initialization.
  */
-payload_start:
-.global payload_start
+
+	/* Copy the region from source to source_end over to dest. */
+	.macro mem_copy, source, source_end, dest
+	ldr   r0,=\source
+	ldr   r1,=\source_end
+	ldr   r2,=\dest
+	bl    mem_copy_func
+	.endm
+
+mem_copy_func:
+	/* Stop if source and dest addresses are the same */
+	cmp   r0,r2
+	bxeq  lr
+
+	/* test if all addresses are 16-byte aligned, if so use ldm/stm copy */
+	mov   r3,r0
+	orr   r3,r3,r1
+	orr   r3,r3,r2
+	ands  r3,r3,#15
+	beq     mcf_16_aligned
+
+	/* else use 4-byte aligned loop */
+mcf_loop:
+	cmp   r0,r1
+	ldrlo r3,[r2],#4
+	strlo r3,[r0],#4
+	blo   mcf_loop
+	bx    lr
+
+mcf_16_aligned:
+	cmp   r0,r1
+	ldmloia r0!,{r3-r6}
+	stmloia r2!,{r3-r6}
+	blo   mcf_16_aligned
+	bx    lr
+
+	/* Initialize the region from dest to dest_end with val. */
+	.macro mem_initialize, dest, dest_end, val
+	ldr   r0,=\dest
+	ldr   r1,=\dest_end
+	ldr   r2,=\val
+	bl    mem_init_func
+	.endm
+
+mem_init_func:
+	orr   r3,r0,r1
+	ands  r3,r2,#15
+	beq   mif_16_aligned
+mif_loop:
+	cmp   r0,r1
+	strlo r2,[r0],#4 
+	blo   mif_loop
+	bx    lr
+
+mif_16_aligned:
+	mov   r3,r2
+	mov   r4,r2
+	mov   r5,r2
+mif_16_loop:
+	cmp   r0,r1
+	stmloia r0!,{r2-r5}
+	blo   mif_16_loop
+	bx    lr
 
 
 /*
@@ -189,6 +255,33 @@ payload_start:
  * board is powered on.
  */
 init_reset:
+	/* Test to see whether the bottom of memory is RAM or not. If
+	 * it is not, execute a remap.
+	 */
+	ldr  r0,=0x000000
+	ldr  r1,=RAM_START
+
+	/* Read the reset vector, then invert the bottom byte of ram
+	 * and see if the reset vector has changed. If so, we're already
+	 * in RAM.
+	 */
+	ldr  r2,[r0]
+	ldr  r3,[r1]
+	ldr  r4,=0xFFFFFFFF
+	eor  r4,r4,r3
+	str  r4,[r1]
+	ldr  r4,[r0]
+	str  r3,[r1]
+
+	cmp r2, r4
+
+	/* If the bottom byte of memory didn't change, execute a remap
+	 * to put the RAM there.
+	 */
+	ldreq r0, =MC_BASE
+	moveq r1, #0x1
+	streq r1, [r0, #MC_REMAP]
+
 	/* Set up the supervisor mode stack at the top of RAM. */
 	ldr sp, =RAM_END
 
@@ -204,71 +297,34 @@ init_reset:
 	msr CPSR_c, #(IRQ_MASK | FIQ_MASK | MODE_FIQ)
 	ldr r8, =AIC_BASE
 
+	/* Copy the data and ramtext sections into ram if necessary,
+	 * and initialize the BSS and stack regions.
+	 */
+	mem_copy __data_load_start, __data_load_end, __data_ram_start
+	mem_copy __ramtext_load_start, __ramtext_load_end, __ramtext_ram_start
+	mem_initialize __bss_start, __bss_end, 0
+	mem_initialize __stack_start, __stack_end, 0
+
 	/* Switch to IRQ mode and set up the IRQ stack at the very top
 	 * of ram. Given our IRQ dispatch code, we need 3 words per
 	 * priority level, so a stack of 3*4*8 bytes.
 	 */
 	msr CPSR_c, #(IRQ_MASK | FIQ_MASK | MODE_IRQ)
-	ldr r0, =RAM_END
+	ldr r0, =__irq_stack
 	mov sp, r0
-	sub r0, r0, #IRQ_STACK_SIZE
 
 	/* Go back to Supervisor mode and set up the Supervisor stack
 	 * to start at the top of the IRQ stack.
 	 */
 	msr CPSR_c, #(IRQ_MASK | FIQ_MASK | MODE_SVC)
+	ldr r0, =__system_stack
 	mov sp, r0
 
-	/* Copy the interrupt vectors and interrupt dispatchers into
-	 * ram. We don't copy the init_reset method, as we're going to
-	 * put the actual application payload there.
-	 */
-	ldr r0, =RAM_START
-	mov r1, #0
-	ldr r2, =payload_start
-	bl init_memcpy
+	/* Set up initial frame pointers and boot the main kernel code. */
+	mov r0, #0
+	mov fp, r0
+	mov r7, r0
 
-	/* Overwrite the reset vector to point to itself. We don't yet
-	 * support warm reboots, so we should just crash if it's
-	 * attempted.
-	 */
-	ldr r1, =RAM_START
-	str r1, [r1]
-
-	/* Copy the application payload to ram. For this, we use the
-	 * handy symbols that ld provides us, that give us the address in
-	 * flash where the payload is, and the total size of the payload.
-	 *
-	 * We load the payload at the address payload_start, which is
-	 * where ld relocated the addresses to be.
-	 *
-	 * Note that this overwrites the code we're currently in, so
-	 * as soon as we remap the bottom section from flash to ram, the
-	 * crt0 initialization code will be lost. No biggie, we can still
-	 * get to it by hitting flash directly.
-	 */
-	ldr r1, =__b_load
-	ldr r2, =__load_size
-	bl init_memcpy
-
-	/* Initialize the BSS. Again, we use handy symbols that ld
-	 * defines for us, that specify the size of the BSS section.
-	 */
-	mov r1, #0
-	ldr r2, =__bss_size
-	bl init_memset
-
-	/* We're almost ready to boot the kernel. We first set up all
-	 * the registers, getting ready for the remap. Once the remap
-	 * command has executed, we have to banch to load_main before the
-	 * pipeline empties, otherwise we'll fall down into the
-	 * application payload and crash.
-	 */
+	ldr r5, =kernel_main
 	ldr lr, =end
-	ldr ip, =kernel_main
-	ldr r4, =MC_BASE
-	mov r5, #1
-
-	/* Execute the remap, and branch into the kernel. */
-	str r5, [r4, #MC_REMAP]
-	bx ip
+	bx r5
