@@ -90,8 +90,7 @@ irq_dispatch:
 	/* If we're in Protected mode (usually for JTAG debugging), we
 	 * need to write back to the IVR register to tell the AIC it
 	 * can dispatch other higher priority interrupts again.
-	 * interrupt line. In normal mode, this has no effect, so we can
-	 * safely do it.
+	 * In normal mode, this has no effect, so we can safely do it.
 	 */
 	str lr, [lr, #AIC_IVR]
 
