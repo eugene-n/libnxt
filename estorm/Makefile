@@ -1,7 +1,8 @@
-TOOL_PREFIX=arm-elf-
-TOOL_SUFFIX=-4.1.1
+include environment.mak
 
-S_SOURCES =
+TARGET = nxtos
+
+S_SOURCES = crt0_s.S vectors.s
 C_SOURCES = main.c aic.c sys_timer.c
 
 S_OBJECTS = $(S_SOURCES:.S=.o)
