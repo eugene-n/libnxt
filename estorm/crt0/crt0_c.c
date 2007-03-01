@@ -3,8 +3,6 @@
 #include "at91sam7s256.h"
 
 extern void nxt_default_irq_handler(void);
-extern void nxt_default_fiq_handler(void);
-extern void nxt_spurious_irq_handler(void);
 
 /* Boot the board's main oscillator and step the CPU up to 48MHz. */
 static inline void init_clocks()
@@ -107,11 +105,11 @@ static inline void init_aic() {
    * are undefined, which will cause undefined behavior if the kernel
    * activates an interrupt line before configuring the handler.
    */
-  AT91C_BASE_AIC->AIC_SVR[0] = (long int) nxt_default_fiq_handler;
+  AT91C_BASE_AIC->AIC_SVR[0] = (long int) nxt_default_irq_handler;
   for (i=1; i<31; i++) {
     AT91C_BASE_AIC->AIC_SVR[i] = (long int) nxt_default_irq_handler;
   }
-  AT91C_BASE_AIC->AIC_SPU = (long int) nxt_spurious_irq_handler;
+  AT91C_BASE_AIC->AIC_SPU = (long int) nxt_default_irq_handler;
 
 }
 

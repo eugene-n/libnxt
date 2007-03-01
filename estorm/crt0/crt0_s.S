@@ -166,18 +166,13 @@ interrupts_count:
 	.int 0
 
 /*
- * Default handlers for the interrupt controller. The board is
- * initialized with interrupts disabled, and these handlers set.
+ * Default handler for the interrupt controller. The board is
+ * initialized with interrupts disabled, and this handler set for all
+ * interrupts.
  */
-nxt_default_fiq_handler:
-	b nxt_default_fiq_handler
 nxt_default_irq_handler:
 	b nxt_default_irq_handler
-nxt_spurious_irq_handler:
-	b nxt_spurious_irq_handler
-.global nxt_default_fiq_handler
 .global nxt_default_irq_handler
-.global nxt_spurious_irq_handler
 
 end:	b end
 
