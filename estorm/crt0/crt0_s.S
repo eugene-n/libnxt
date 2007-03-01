@@ -27,9 +27,9 @@
  */
 reset:		b init_reset	/* Reset */
 illegal_hdl:	b illegal_hdl 	/* Illegal instruction */
-swi_hdl:	b swi_hdl	/* No SWI handling */
+swi_hdl:	b swi_hdl	/* Software interrupt */
 prefetch_hdl:	b prefetch_hdl	/* Prefetch abort */
-data_hdl:	b data_hdl	/* Data abord */
+data_hdl:	b data_hdl	/* Data abort */
 reserved_hdl:	b reserved_hdl	/* Reserved vector */
 irq_hdl:	b irq_dispatch  /* IRQ */
 fiq_hdl:			/* FIQ */
