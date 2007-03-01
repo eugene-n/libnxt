@@ -81,9 +81,9 @@ static inline void init_clocks()
 static inline void init_aic() {
   int i;
 
-  /* Do some garbage collection on the AIC. All these are to protect
-   * against the case where we are coming from a warm boot. These
-   * values define the modes in which the AIC should be booting up.
+  /* Do some cleanup on the AIC. All these are to protect against the
+   * case where we are coming from a warm boot. These values define
+   * the modes in which the AIC should be booting up.
    *
    *  - Disable all peripheral interrupt lines.
    *  - Turn off Fast Forcing for all peripheral interrupt lines.
@@ -124,9 +124,9 @@ void nxt_low_level_init() {
    * settings are valid for writing everywhere but the non-volatile bits
    * (lock, security, general-purpose NVM).
    *
-   * These values will yield valid timing only after the master clock
-   * is configured to run at 48MHz, ie. after the call to
-   * init_clocks. Do NOT write to flash before then!
+   * These values are valid only after the master clock is configured
+   * to run at 48MHz, ie. after the call to init_clocks. Do NOT write
+   * to flash before then!
    */
   *AT91C_MC_FMR = AT91C_MC_FWS_1FWS | (0x48 << 16);
 

@@ -5,7 +5,7 @@
 /* The board is clocked at 48MHz */
 #define CLOCK_FREQ 48000000
 
-/* The Periodic Interval Timer has a frequency of CLK/16. */
+/* The Periodic Interval Timer runs at 3MHz. */
 #define PIT_FREQ (CLOCK_FREQ/16)
 
 void sys_timer_isr(void) {
