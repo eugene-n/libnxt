@@ -2,8 +2,8 @@ include environment.mak
 
 TARGET = nxtos
 
-S_SOURCES = crt0_s.S vectors.s
-C_SOURCES = main.c aic.c sys_timer.c
+S_SOURCES = crt0_s.S vectors.S
+C_SOURCES = crt0_c.c main.c aic.c sys_timer.c
 
 S_OBJECTS = $(S_SOURCES:.S=.o)
 C_OBJECTS = $(C_SOURCES:.c=.o)
