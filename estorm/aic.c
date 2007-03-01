@@ -33,5 +33,4 @@ void aic_install_isr(aic_vector_t vector, void *isr) {
 
   /* Install the provided ISR. */
   AT91C_AIC_SVR[vector] = (unsigned int)isr;
-
 }
