@@ -1,5 +1,6 @@
 #include "at91sam7s256.h"
 
+#include "crt0.h"
 #include "aic.h"
 
 /* The board is clocked at 48MHz */
@@ -34,6 +35,8 @@ static void sys_timer_isr() {
 }
 
 void sys_timer_init() {
+  interrupts_disable();
+
   /* Set the Periodic Interval Timer to a tiny interval, and set it
    * disabled. This way, it should wrap around and shut down quickly,
    * if it's already running.
@@ -56,6 +59,8 @@ void sys_timer_init() {
   *AT91C_PITC_PIMR = (((PIT_FREQ/1000)-1) |
                       AT91C_PITC_PITEN |
                       AT91C_PITC_PITIEN);
+
+  interrupts_enable();
 }
 
 unsigned long sys_timer_get_ms() {
