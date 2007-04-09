@@ -25,6 +25,7 @@ Default(BuildEnv.Library('nxt',
 			 LIBS='usb'))
 
 Default(BuildEnv.Program('fwflash', glob('main_fwflash.c'),
-			 LIBS=['usb', 'nxt'], LIBPATH='.'))
+			 LIBS=['usb', 'nxt'], LIBPATH='.fwexec', glob('main_fwexec.c'),
+		 LIBS=['usb', 'nxt'], LIBPATH='.', 'nxt'], LIBPATH='.'))
 BuildEnv.Program('sambaget', glob('main_sambaget.c'),
-		 LIBS=['usb', 'nxt'], LIBPATH='.')
+		 LIBS=['usb',
