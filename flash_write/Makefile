@@ -4,14 +4,16 @@
 #	objdump --disassemble-all -bbinary -marm7tdmi flash.bin > flash.asm
 #
 
-TOOL_PREFIX=arm-elf-
+CC=`which arm-elf-gcc`
+AS=`which arm-elf-as`
+LD=`which arm-elf-ld`
+OBJCOPY=`which arm-elf-objcopy`
 
 all:
-	$(TOOL_PREFIX)gcc -W -Wall -O3 -mcpu=arm7tdmi -mapcs -mthumb-interwork -c -o flash.o flash.c
-	$(TOOL_PREFIX)as --warn -mcpu=arm7tdmi -mapcs-32 -EL -mthumb-interwork -o crt0.o crt0.s
-	$(TOOL_PREFIX)ld -O3 --gc-sections crt0.o flash.o -o flash
-	$(TOOL_PREFIX)objcopy -O binary flash flash.bin
-	$(TOOL_PREFIX)objdump --disassemble-all -b binary -m arm7tdmi flash.bin > flash.asm
+	$(CC) -W -Wall -O3 -msoft-float -mcpu=arm7tdmi -mapcs -c -o flash.o flash.c
+	$(AS) --warn -mfpu=softfpa -mcpu=arm7tdmi -mapcs-32 -o crt0.o crt0.s
+	$(LD) -O3 --gc-sections crt0.o flash.o -o flash.elf
+	$(OBJCOPY) -O binary flash.elf flash.bin
 
 clean:
-	rm -f flash.o flash.bin flash.asm
+	rm -f flash.o crt0.o flash.elf flash.bin

@@ -15,17 +15,16 @@ if auto_libs:
 	BuildEnv.ParseConfig('pkg-config --cflags --libs ' + auto_libs)
 
 BuildEnv.Command('flash_routine.h',
-		 ['flash_routine.h.base',
-		  'flash_write/flash.bin'],
-		 './make_flash_header.py flash_write/flash.bin')
+		 'flash_routine.h.base',
+		 './make_flash_header.py')
 
 Default(BuildEnv.Library('nxt',
 			 [x for x in glob('*.c')
 			  if not x.startswith('main_')],
 			 LIBS='usb'))
 
-Default(BuildEnv.Program('fwflash', glob('main_fwflash.c'),
-			 LIBS=['usb', 'nxt'], LIBPATH='.fwexec', glob('main_fwexec.c'),
-		 LIBS=['usb', 'nxt'], LIBPATH='.', 'nxt'], LIBPATH='.'))
-BuildEnv.Program('sambaget', glob('main_sambaget.c'),
-		 LIBS=['usb',
+Default(BuildEnv.Program('fwflash', 'main_fwflash.c',
+			 LIBS=['usb', 'nxt'], LIBPATH='.'))
+
+Default(BuildEnv.Program('fwexec', 'main_fwexec.c',
+			 LIBS=['usb', 'nxt'], LIBPATH='.'))
