@@ -90,7 +90,6 @@ nxt_error_t nxt_find(nxt_t *nxt)
 nxt_error_t
 nxt_open(nxt_t *nxt)
 {
-  char buf[2];
   int ret;
 
   nxt->hdl = usb_open(nxt->dev);
@@ -107,16 +106,6 @@ nxt_open(nxt_t *nxt)
     {
       usb_close(nxt->hdl);
       return NXT_IN_USE;
-    }
-
-  /* NXT handshake */
-  nxt_send_str(nxt, "N#");
-  nxt_recv_buf(nxt, buf, 2);
-  if (memcmp(buf, "\n\r", 2) != 0)
-    {
-      usb_release_interface(nxt->hdl, 1);
-      usb_close(nxt->hdl);
-      return NXT_HANDSHAKE_FAILED;
     }
 
   return NXT_OK;

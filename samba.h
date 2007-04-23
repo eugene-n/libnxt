@@ -31,6 +31,8 @@ typedef uint32_t nxt_word_t;
 typedef uint16_t nxt_hword_t;
 typedef unsigned char nxt_byte_t;
 
+nxt_error_t nxt_handshake(nxt_t *nxt);
+
 nxt_error_t nxt_write_byte(nxt_t *nxt, nxt_addr_t addr, nxt_byte_t b);
 nxt_error_t nxt_write_hword(nxt_t *nxt, nxt_addr_t addr, nxt_hword_t hw);
 nxt_error_t nxt_write_word(nxt_t *nxt, nxt_addr_t addr, nxt_word_t w);

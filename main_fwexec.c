@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
     }
 
   NXT_HANDLE_ERR(nxt_open(nxt), NULL, "Error while connecting to NXT");
+  NXT_HANDLE_ERR(nxt_handshake(nxt), NULL, "Error during initial handshake");
 
   printf("NXT device in reset mode located and opened.\n"
          "Uploading firmware...\n");

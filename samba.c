@@ -56,6 +56,23 @@ nxt_write_common(nxt_t *nxt, char type, nxt_addr_t addr, nxt_word_t w)
 
 
 nxt_error_t
+nxt_handshake(nxt_t *nxt)
+{
+  char buf[2];
+
+  nxt_send_str(nxt, "N#");
+  nxt_recv_buf(nxt, buf, 2);
+  if (memcmp(buf, "\n\r", 2) != 0)
+    {
+      nxt_close(nxt);
+      return NXT_HANDSHAKE_FAILED;
+    }
+
+  return NXT_OK;
+}
+
+
+nxt_error_t
 nxt_write_byte(nxt_t *nxt, nxt_addr_t addr, nxt_byte_t b)
 {
   return nxt_write_common(nxt, 'O', addr, b);
