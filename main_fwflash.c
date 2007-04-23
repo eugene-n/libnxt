@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
       exit(1);
     }
 
-  if (!nxt_in_reset_mode(nxt))
+  if (!nxt_is_firmware(nxt, SAMBA))
     {
       printf("NXT found, but not running in reset mode.\n");
       printf("Please reset your NXT manually and restart this program.\n");

@@ -28,11 +28,17 @@
 struct nxt_t;
 typedef struct nxt_t nxt_t;
 
+typedef enum {
+  SAMBA = 0,   /* SAM7 Boot Assistant    */
+  LEGO,        /* Official LEGO firmware */
+  N_FIRMWARES,
+} nxt_firmware;
+
 nxt_error_t nxt_init(nxt_t **nxt);
 nxt_error_t nxt_find(nxt_t *nxt);
 nxt_error_t nxt_open(nxt_t *nxt);
 nxt_error_t nxt_close(nxt_t *nxt);
-int nxt_in_reset_mode(nxt_t *nxt);
+int nxt_is_firmware(nxt_t *nxt, nxt_firmware fw);
 nxt_error_t nxt_send_buf(nxt_t *nxt, char *buf, int len);
 nxt_error_t nxt_send_str(nxt_t *nxt, char *str);
 nxt_error_t nxt_recv_buf(nxt_t *nxt, char *buf, int len);

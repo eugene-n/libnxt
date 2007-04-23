@@ -30,17 +30,19 @@
 
 #include "lowlevel.h"
 
-enum nxt_usb_ids {
-  VENDOR_LEGO   = 0x0694,
-  VENDOR_ATMEL  = 0x03EB,
-  PRODUCT_NXT   = 0x0002,
-  PRODUCT_SAMBA = 0x6124
+
+const struct {
+  int vendor_id;
+  int product_id;
+} nxt_usb_ids[N_FIRMWARES] = {
+  { 0x03EB, 0x6124 }, /* SAM-BA */
+  { 0x0694, 0x0002 }, /* LEGO   */
 };
 
 struct nxt_t {
   struct usb_device *dev;
   struct usb_dev_handle *hdl;
-  int is_in_reset_mode;
+  nxt_firmware firmware;
 };
 
 
@@ -68,19 +70,16 @@ nxt_error_t nxt_find(nxt_t *nxt)
 
       for (dev = bus->devices; dev != NULL; dev = dev->next)
         {
-          if (dev->descriptor.idVendor == VENDOR_ATMEL &&
-              dev->descriptor.idProduct == PRODUCT_SAMBA)
-            {
-              nxt->dev = dev;
-              nxt->is_in_reset_mode = 1;
-              return NXT_OK;
-            }
-          else if (dev->descriptor.idVendor == VENDOR_LEGO &&
-                   dev->descriptor.idProduct == PRODUCT_NXT)
-            {
-              nxt->dev = dev;
-              return NXT_OK;
-            }
+          int i;
+
+          for (i=0; i<N_FIRMWARES; i++)
+            if (dev->descriptor.idVendor == nxt_usb_ids[i].vendor_id &&
+                dev->descriptor.idProduct == nxt_usb_ids[i].product_id)
+              {
+                nxt->dev = dev;
+                nxt->firmware = i;
+                return NXT_OK;
+              }
         }
     }
 
@@ -136,9 +135,9 @@ nxt_close(nxt_t *nxt)
 
 
 int
-nxt_in_reset_mode(nxt_t *nxt)
+nxt_is_firmware(nxt_t *nxt, nxt_firmware fw)
 {
-  return nxt->is_in_reset_mode;
+  return (nxt->firmware == fw);
 }
 
 
