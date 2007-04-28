@@ -30,7 +30,8 @@ typedef struct nxt_t nxt_t;
 
 typedef enum {
   SAMBA = 0,   /* SAM7 Boot Assistant    */
-  LEGO,        /* Official LEGO firmware */
+  LEGO, /* Official LEGO firmware */
+  NXTOS,
   N_FIRMWARES,
 } nxt_firmware;
 

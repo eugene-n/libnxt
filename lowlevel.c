@@ -37,6 +37,7 @@ const struct {
 } nxt_usb_ids[N_FIRMWARES] = {
   { 0x03EB, 0x6124 }, /* SAM-BA */
   { 0x0694, 0x0002 }, /* LEGO   */
+  { 0x0694, 0xFF00 }  /* NXTOS  */
 };
 
 struct nxt_t {
