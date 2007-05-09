@@ -44,6 +44,7 @@ struct nxt_t {
   struct usb_device *dev;
   struct usb_dev_handle *hdl;
   nxt_firmware firmware;
+  int interface;
 };
 
 
@@ -89,7 +90,7 @@ nxt_error_t nxt_find(nxt_t *nxt)
 
 
 nxt_error_t
-nxt_open(nxt_t *nxt)
+nxt_open(nxt_t *nxt, int interface)
 {
   int ret;
 
@@ -102,12 +103,14 @@ nxt_open(nxt_t *nxt)
       return NXT_CONFIGURATION_ERROR;
     }
 
-  ret = usb_claim_interface(nxt->hdl, 1);
+  ret = usb_claim_interface(nxt->hdl, interface);
   if (ret < 0)
     {
       usb_close(nxt->hdl);
       return NXT_IN_USE;
     }
+
+  nxt->interface = interface;
 
   return NXT_OK;
 }
@@ -116,7 +119,7 @@ nxt_open(nxt_t *nxt)
 nxt_error_t
 nxt_close(nxt_t *nxt)
 {
-  usb_release_interface(nxt->hdl, 1);
+  usb_release_interface(nxt->hdl, nxt->interface);
   usb_close(nxt->hdl);
   free(nxt);
 

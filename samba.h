@@ -26,6 +26,8 @@
 #include "error.h"
 #include "lowlevel.h"
 
+#define NXT_SAMBA_INTERFACE 1
+
 typedef uint32_t nxt_addr_t;
 typedef uint32_t nxt_word_t;
 typedef uint16_t nxt_hword_t;

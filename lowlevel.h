@@ -37,7 +37,7 @@ typedef enum {
 
 nxt_error_t nxt_init(nxt_t **nxt);
 nxt_error_t nxt_find(nxt_t *nxt);
-nxt_error_t nxt_open(nxt_t *nxt);
+nxt_error_t nxt_open(nxt_t *nxt, int interface);
 nxt_error_t nxt_close(nxt_t *nxt);
 int nxt_is_firmware(nxt_t *nxt, nxt_firmware fw);
 nxt_error_t nxt_send_buf(nxt_t *nxt, char *buf, int len);
