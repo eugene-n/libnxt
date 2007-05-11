@@ -19,23 +19,40 @@
  * USA
  */
 
-#include "error.h"
+#include "lego-nxt.h"
 
-static const char const *err_str[] = {
-  "Success",
-  "NXT not found on USB bus",
-  "Error trying to configure the NXT USB link",
-  "NXT USB interface is already claimed by another program",
-  "USB write error",
-  "USB read error",
-  "SAM-BA protocol error",
-  "NXT handshake failed",
-  "File open/handling error",
-  "Invalid firmware image",
+
+/* A mapping of the error codes to nice strings for displaying. */
+static const struct error_def {
+  nxt_error_t errcode;
+  const char *errstr;
+} error_map[] = {
+  { NXT_OK, "Success" },
+  { NXT_UNKNOWN_ERROR, "Unknown error" },
+  { NXT_FILE_ERROR, "File open/handling error" },
+
+  { NXT_USB_NOT_FOUND, "NXT not found on USB bus" },
+  { NXT_CONFIGURATION_ERROR, "Error trying to configure the NXT USB link" },
+  { NXT_IN_USE, "NXT USB interface is already claimed by another program" },
+  { NXT_USB_WRITE_ERROR, "USB write error" },
+  { NXT_USB_READ_ERROR, "USB read error" },
+
+  { NXT_SAMBA_PROTOCOL_ERROR, "SAM-BA protocol error" },
+  { NXT_SAMBA_HANDSHAKE_FAILED, "NXT handshake failed" },
+  { NXT_SAMBA_INVALID_FIRMWARE, "Invalid firmware image" },
+
+  { NXT_OK, NULL } /* Sentinel */
 };
 
+
 const char const *
-nxt_str_error(nxt_error_t err)
+nxt_strerror(nxt_error_t err)
 {
-  return err_str[err];
+  struct error_def *def;
+
+  for (def = error_map; def->errstr != NULL; def++)
+    if (def->errcode == err)
+      return dev->errstr;
+
+  return error_map[NXT_UNKNOWN_ERROR].errstr;
 }
