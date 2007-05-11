@@ -28,6 +28,7 @@ static const struct error_def {
   const char *errstr;
 } error_map[] = {
   { NXT_OK, "Success" },
+  { NXT_INIT_FAILED, "Initialization failed" },
   { NXT_UNKNOWN_ERROR, "Unknown error" },
   { NXT_FILE_ERROR, "File open/handling error" },
 

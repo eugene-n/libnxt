@@ -24,9 +24,10 @@
 
 #include <stdint.h>
 
-/*********************
- * Type definitions. *
- *********************/
+/** @defgroup types Basic types
+ *
+ * @{
+ */
 
 /** Opaque handle to an NXT brick. */
 typedef struct nxt_t nxt_t;
@@ -37,10 +38,12 @@ typedef enum
 {
   /** No error. */
   NXT_OK = 0,
+  /** Initialization failed. */
+  NXT_INIT_FAILED = 1,
   /** Unknown error */
-  NXT_UNKNOWN_ERROR = 1,
+  NXT_UNKNOWN_ERROR = 2,
   /** File open/handling error. */
-  NXT_FILE_ERROR = 2,
+  NXT_FILE_ERROR = 3,
 
   /*
    * Low-level USB errors.
@@ -72,12 +75,37 @@ typedef enum
 
 /** A list of known NXT firmwares. */
 typedef enum {
+  /** Unknown firmware. */
+  UNKNOWN = 0,
   /** Atmel SAM7 Boot Assistant. */
-  SAMBA = 0,
+  SAMBA,
   /** The official Lego firmware. */
   LEGO,
   N_FIRMWARES,
 } nxt_firmware_t;
+
+/*@}*/
+
+
+
+/** @defgroup core Core functions
+ *
+ * The core functions handle global initialization and error
+ * reporting.
+ *
+ * @{
+ */
+
+/** Initialize the library.
+ *
+ * The initialization function can be called multiple times without
+ * side-effects (all calls but the first are ignored). This function
+ * should be called in a single-threaded context.
+ *
+ * @warning This function @b must be called before any other functions
+ * in the library, and is @b not threadsafe.
+ */
+nxt_error_t nxt_init();
 
 
 /** Return the descriptive string associated with an error.
@@ -90,7 +118,7 @@ typedef enum {
 const char const *nxt_strerror(nxt_error_t err);
 
 
-/** Macro used internally for nice looking error propagation.
+/** Macro that can be used for nice looking error propagation.
  *
  * If the given expression (usually a library call returning @a
  * nxt_error_t) evaluates to something other than NXT_OK, return the
@@ -102,6 +130,9 @@ const char const *nxt_strerror(nxt_error_t err);
     if (nxt__err_temp)                  \
       return nxt__err_temp;             \
   } while(0)
+
+/*@}*/
+
 
 
 /** @defgroup usb Low level USB communication
@@ -153,8 +184,18 @@ nxt_error_t nxt_usb_open(nxt_t **nxt, nxt_firmware_t firmware);
  * @return NXT_OK if a brick with the specified USB IDs is found and
  * opened successfully, or an NXT_USB_* error otherwise.
  */
-nxt_error_t nxt_usb_open_full(nxt_t **nxt, unsigned short int vendor_id,
-                              unsigned short int product_id);
+nxt_error_t nxt_usb_open_full(nxt_t **nxt, uint16_t vendor_id,
+                              uint16_t product_id);
+
+
+/** Close the given USB link and free all associated resources.
+ *
+ * The handle passed to this function is no longer valid after
+ * execution of the function, and should no longer be used.
+ *
+ * @param[in] nxt The handle to the brick.
+ */
+nxt_error_t nxt_usb_close(nxt_t *nxt);
 
 
 /** Select the USB interface to use for communication with a brick.
@@ -170,7 +211,7 @@ nxt_error_t nxt_usb_open_full(nxt_t **nxt, unsigned short int vendor_id,
  * @return NXT_OK if the requested interface was successfully
  * obtained, or an NXT_USB_* error otherwise.
  */
-nxt_error_t nxt_usb_select_interface(nxt_t *nxt, unsigned int interface_num);
+nxt_error_t nxt_usb_select_interface(nxt_t *nxt, uint16_t interface_num);
 
 
 /** Send data to a bulk endpoint of an open NXT brick.
@@ -185,7 +226,7 @@ nxt_error_t nxt_usb_select_interface(nxt_t *nxt, unsigned int interface_num);
  * @return NXT_OK if the data was successfully sent, or an NXT_USB_*
  * error otherwise.
  */
-nxt_error_t nxt_usb_bulk_send(nxt_t *nxt, unsigned int endpoint,
+nxt_error_t nxt_usb_bulk_send(nxt_t *nxt, uint16_t endpoint,
                               char *buf, unsigned int len);
 
 
@@ -202,7 +243,7 @@ nxt_error_t nxt_usb_bulk_send(nxt_t *nxt, unsigned int endpoint,
  * @return NXT_OK if the data was successfully sent, or an NXT_USB_*
  * error otherwise.
  */
-nxt_error_t nxt_usb_bulk_send_str(nxt_t *nxt, unsigned int endpoint, char *str);
+nxt_error_t nxt_usb_bulk_send_str(nxt_t *nxt, uint16_t endpoint, char *str);
 
 
 /** Receive data from a bulk endpoint of an open NXT brick.
@@ -215,7 +256,7 @@ nxt_error_t nxt_usb_bulk_send_str(nxt_t *nxt, unsigned int endpoint, char *str);
  * @return NXT_OK if the data was successfully read, or an NXT_USB_*
  * error otherwise.
  */
-nxt_error_t nxt_usb_bulk_recv(nxt_t *nxt, unsigned int endpoint,
+nxt_error_t nxt_usb_bulk_recv(nxt_t *nxt, uint16_t endpoint,
                               char *buf, unsigned int len);
 
 /*@}*/
